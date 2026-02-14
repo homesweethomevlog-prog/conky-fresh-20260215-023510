@@ -9,6 +9,19 @@ local function draw_text(cr, text, x, y, size, alpha, bold)
   cairo_show_text(cr, text)
 end
 
+local function draw_text_centered(cr, text, center_x, y, size, alpha, bold)
+  local weight = bold and CAIRO_FONT_WEIGHT_BOLD or CAIRO_FONT_WEIGHT_NORMAL
+  cairo_select_font_face(cr, 'JetBrainsMono Nerd Font', CAIRO_FONT_SLANT_NORMAL, weight)
+  cairo_set_font_size(cr, size)
+
+  local extents = cairo_text_extents_t:create()
+  cairo_text_extents(cr, text, extents)
+
+  cairo_set_source_rgba(cr, 1, 1, 1, alpha or 1)
+  cairo_move_to(cr, center_x - (extents.width / 2) - extents.x_bearing, y)
+  cairo_show_text(cr, text)
+end
+
 local function draw_panel(cr, x, y, width, height)
   cairo_set_source_rgba(cr, 1, 1, 1, 0.10)
   cairo_rectangle(cr, x, y, width, height)
@@ -85,9 +98,9 @@ function conky_calendar_panel()
   local cr = cairo_create(cs)
 
   local panel_w = 640
-  local panel_h = 470
+  local panel_h = 430
   local x = (conky_window.width - panel_w) / 2
-  local y = (conky_window.height - panel_h) / 2
+  local y = (conky_window.height - panel_h) / 2 + 20
 
   draw_panel(cr, x, y, panel_w, panel_h)
 
@@ -96,6 +109,9 @@ function conky_calendar_panel()
   local year = tonumber(conky_parse('${time %Y}')) or tonumber(os.date('%Y'))
   local month = tonumber(conky_parse('${time %m}')) or tonumber(os.date('%m'))
   local month_grid = build_month_grid(year, month)
+  local clock_text = conky_parse('${time %H:%M:%S}')
+
+  draw_text_centered(cr, clock_text, x + (panel_w / 2), y - 6, 65, 1, true)
 
   draw_text(cr, '  ' .. month_title, x + 26, y + 46, 30, 1, true)
   draw_text(cr, conky_parse('${time %A, %b %d}'), x + 28, y + 76, 16, 0.9, false)
