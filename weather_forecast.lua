@@ -166,9 +166,9 @@ function conky_weather_forecast()
       draw_png(cr, current_icon_path, x + 30, y + 16, 68, 68)
     end
   end
-  draw_text(cr, current_temp, x + 115, y + 52, 34, 1)
-  draw_text(cr, ellipsize(current_condition_text, 42), x + 245, y + 52, 20, 0.95)
-  draw_text(cr, 'Bacoor, Cavite', x + 115, y + 82, 16, 0.9)
+  draw_text(cr, current_temp, x + 115, y + 54, 34, 1)
+  draw_text(cr, ellipsize(current_condition_text, 30), x + 245, y + 76, 18, 0.95)
+  draw_text(cr, 'Bacoor, Cavite', x + 32, y + 92, 16, 0.9)
 
   cairo_set_source_rgba(cr, 1, 1, 1, 0.35)
   cairo_set_line_width(cr, 1)
