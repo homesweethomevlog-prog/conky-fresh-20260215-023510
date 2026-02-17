@@ -29,6 +29,30 @@ def icon_key_for_condition(text: str) -> str:
     return "partly"
 
 
+def icon_file_for_key(key: str) -> str:
+    return {
+        "clear": "01d",
+        "partly": "02d",
+        "cloudy": "03d",
+        "rain": "10d",
+        "storm": "11d",
+        "snow": "13d",
+        "fog": "50d",
+    }.get(key, "02d")
+
+
+def icon_symbol_for_key(key: str) -> str:
+    return {
+        "clear": "",
+        "partly": "",
+        "cloudy": "",
+        "rain": "",
+        "storm": "",
+        "snow": "",
+        "fog": "",
+    }.get(key, "")
+
+
 try:
     with urllib.request.urlopen(URL, timeout=12) as response:
         payload = json.load(response)
@@ -41,8 +65,27 @@ try:
 
     mode = sys.argv[1] if len(sys.argv) > 1 else "summary"
 
+    icon_key = icon_key_for_condition(description)
+
     if mode == "icon":
-        print(icon_key_for_condition(description))
+        print(icon_key)
+    elif mode == "icon_symbol":
+        print(icon_symbol_for_key(icon_key))
+    elif mode == "icon_file":
+        print(icon_file_for_key(icon_key))
+    elif mode == "icon_conky":
+        icon_file = icon_file_for_key(icon_key)
+        print(f"${{image ~/.config/conky/weather_icons/{icon_file}.png -p 24,1688 -s 20x20}}")
+    elif mode == "summary_icon":
+        icon_symbol = icon_symbol_for_key(icon_key)
+        if temp is None and not description:
+            unavailable()
+        elif temp is None:
+            print(f"{icon_symbol}  {description}")
+        elif description:
+            print(f"{icon_symbol}  {temp}\u00b0C  {description}")
+        else:
+            print(f"{icon_symbol}  {temp}\u00b0C")
     elif mode == "details":
         if humidity is None and wind_kph is None:
             unavailable()
