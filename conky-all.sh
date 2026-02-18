@@ -5,9 +5,8 @@ BASE_DIR="$HOME/.config/conky"
 
 start_if_missing() {
   local cfg="$1"
-  if ! pgrep -af "conky -c ${cfg}" >/dev/null; then
-    conky -c "$cfg" -d
-  fi
+  pkill -f "conky -c ${cfg}" >/dev/null 2>&1 || true
+  /usr/bin/conky -c "$cfg" -d
 }
 
 start_if_missing "$BASE_DIR/conky.conf"
