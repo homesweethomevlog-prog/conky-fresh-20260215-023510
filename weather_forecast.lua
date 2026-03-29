@@ -1,7 +1,7 @@
 require 'cairo'
 
 local HOME = os.getenv('HOME') or ''
-local ICON_DIR = HOME .. '/.config/conky/weather_icons'
+local ICON_DIR = HOME .. '/.conky/weather_icons'
 
 local function file_exists(path)
   local handle = io.open(path, 'rb')
@@ -156,7 +156,7 @@ function conky_weather_forecast()
   local y = (conky_window.height - panel_h) / 2
 
   draw_panel(cr, x, y, panel_w, panel_h)
-  local current_summary = conky_parse('${execi 600 python3 ~/.config/conky/weather_bbc.py summary}')
+  local current_summary = conky_parse('${execi 600 python3 ~/.conky/weather_bbc.py summary}')
   local current_temp, current_condition_text = split_temp_and_condition(current_summary)
   local current_condition = condition_from_summary(current_summary)
   if current_condition ~= '' and current_summary ~= 'Unavailable' then
@@ -176,7 +176,7 @@ function conky_weather_forecast()
   cairo_line_to(cr, x + panel_w - 30, y + 100)
   cairo_stroke(cr)
 
-  local raw = conky_parse('${execi 1800 python3 ~/.config/conky/weather_bbc_7day.py}')
+  local raw = conky_parse('${execi 1800 python3 ~/.conky/weather_bbc_7day.py}')
   local lines = split_lines(raw)
 
   if #lines == 0 or lines[1] == 'Unavailable' then

@@ -1,7 +1,7 @@
 require 'cairo'
 
 local HOME = os.getenv('HOME') or ''
-local VCLOUDS_DIR = HOME .. '/.config/conky/vclouds'
+local VCLOUDS_DIR = HOME .. '/.conky/vclouds'
 
 local function file_exists(path)
   local handle = io.open(path, 'rb')
@@ -96,7 +96,7 @@ function conky_draw_rings()
   draw_ring(cr, mem / 100, center_x, center_y, 120, 14, {1, 1, 1, 0.15}, {0.4, 1, 0.5, 0.9})
   draw_ring(cr, disk / 100, center_x, center_y, 145, 14, {1, 1, 1, 0.15}, {1, 0.7, 0.2, 0.9})
 
-  local icon_key = conky_parse('${execi 1800 python3 ~/.config/conky/weather_bbc.py icon}')
+  local icon_key = conky_parse('${execi 1800 python3 ~/.conky/weather_bbc.py icon}')
   local icon_path = resolve_icon_path(icon_key or '')
   if icon_path then
     draw_png(cr, icon_path, 20, 345, 84, 84)

@@ -75,7 +75,7 @@ try:
         print(icon_file_for_key(icon_key))
     elif mode == "icon_conky":
         icon_file = icon_file_for_key(icon_key)
-        print(f"${{image ~/.config/conky/weather_icons/{icon_file}.png -p 24,1688 -s 20x20}}")
+        print(f"${{image ~/.conky/weather_icons/{icon_file}.png -p 24,1688 -s 20x20}}")
     elif mode == "summary_icon":
         icon_symbol = icon_symbol_for_key(icon_key)
         if temp is None and not description:

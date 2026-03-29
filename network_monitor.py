@@ -7,6 +7,10 @@ import time
 from pathlib import Path
 
 STATE_PATH = Path('/tmp/conky_network_state.json')
+MIN_SAMPLE_INTERVAL = 0.8
+MIN_DOWN_GRAPH_KIB = 256.0
+MIN_UP_GRAPH_KIB = 64.0
+PEAK_DECAY = 0.92
 
 
 def run_command(args: list[str]) -> str:
@@ -88,29 +92,78 @@ def save_state(state: dict) -> None:
         pass
 
 
-def speed_text(iface: str) -> str:
+def graph_percent(value_kib: float, peak_kib: float, minimum_peak_kib: float) -> tuple[float, float]:
+    next_peak = max(value_kib, minimum_peak_kib, peak_kib * PEAK_DECAY)
+    if next_peak <= 0:
+        return (0.0, minimum_peak_kib)
+    return (min((value_kib / next_peak) * 100.0, 100.0), next_peak)
+
+
+def sample_speeds(iface: str) -> tuple[float, float]:
     if not iface:
-        return 'Down: 0.0 KiB/s  Up: 0.0 KiB/s'
+        return (0.0, 0.0)
 
     now = time.time()
     rx_now, tx_now = read_bytes(iface)
 
     state = load_state()
-    prev = state.get(iface)
+    prev = state.get(iface, {})
 
-    down_kib = 0.0
-    up_kib = 0.0
-    if prev:
-        dt = max(now - float(prev.get('t', now)), 0.001)
-        rx_prev = int(prev.get('rx', rx_now))
-        tx_prev = int(prev.get('tx', tx_now))
-        down_kib = max((rx_now - rx_prev) / 1024.0 / dt, 0.0)
-        up_kib = max((tx_now - tx_prev) / 1024.0 / dt, 0.0)
+    down_kib = float(prev.get('down_kib', 0.0))
+    up_kib = float(prev.get('up_kib', 0.0))
+    prev_t = float(prev.get('t', 0.0))
+    down_peak_kib = float(prev.get('down_peak_kib', MIN_DOWN_GRAPH_KIB))
+    up_peak_kib = float(prev.get('up_peak_kib', MIN_UP_GRAPH_KIB))
 
-    state[iface] = {'rx': rx_now, 'tx': tx_now, 't': now}
+    sample_t = prev_t
+    sample_rx = int(prev.get('rx', rx_now))
+    sample_tx = int(prev.get('tx', tx_now))
+
+    if prev_t <= 0:
+        sample_t = now
+        sample_rx = rx_now
+        sample_tx = tx_now
+    else:
+        dt = max(now - prev_t, 0.001)
+        if dt >= MIN_SAMPLE_INTERVAL:
+            down_kib = max((rx_now - sample_rx) / 1024.0 / dt, 0.0)
+            up_kib = max((tx_now - sample_tx) / 1024.0 / dt, 0.0)
+            sample_t = now
+            sample_rx = rx_now
+            sample_tx = tx_now
+
+    _, down_peak_kib = graph_percent(down_kib, down_peak_kib, MIN_DOWN_GRAPH_KIB)
+    _, up_peak_kib = graph_percent(up_kib, up_peak_kib, MIN_UP_GRAPH_KIB)
+
+    state[iface] = {
+        'rx': sample_rx,
+        'tx': sample_tx,
+        't': sample_t,
+        'down_kib': down_kib,
+        'up_kib': up_kib,
+        'down_peak_kib': down_peak_kib,
+        'up_peak_kib': up_peak_kib,
+    }
     save_state(state)
 
+    return (down_kib, up_kib)
+
+
+def speed_text(iface: str) -> str:
+    down_kib, up_kib = sample_speeds(iface)
     return f'Down: {down_kib:.1f} KiB/s  Up: {up_kib:.1f} KiB/s'
+
+
+def graph_value_text(iface: str, direction: str) -> str:
+    down_kib, up_kib = sample_speeds(iface)
+    state = load_state().get(iface, {})
+
+    if direction == 'down':
+        percent, _ = graph_percent(down_kib, float(state.get('down_peak_kib', MIN_DOWN_GRAPH_KIB)), MIN_DOWN_GRAPH_KIB)
+    else:
+        percent, _ = graph_percent(up_kib, float(state.get('up_peak_kib', MIN_UP_GRAPH_KIB)), MIN_UP_GRAPH_KIB)
+
+    return f'{percent:.2f}'
 
 
 def summary_line(iface: str) -> str:
@@ -146,6 +199,10 @@ def main() -> None:
         print(details_line(iface))
     elif mode == 'speed':
         print(speed_text(iface))
+    elif mode == 'down_pct':
+        print(graph_value_text(iface, 'down'))
+    elif mode == 'up_pct':
+        print(graph_value_text(iface, 'up'))
     else:
         print('Network: Unknown mode')
 
