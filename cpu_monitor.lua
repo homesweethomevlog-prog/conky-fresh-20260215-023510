@@ -855,13 +855,13 @@ function conky_cpu_monitor()
   draw_text_right(cr, string.format('Total %s', totaldown ~= '' and totaldown or '0B'), x + 440, down_y, 15, 0.85)
   draw_graph(cr, x + 32, down_y + 10, 408, 34, network_graphs.rx_history, 0.98, 0.47, 0.28)
 
-  local up_y = down_y + 56
+  local up_y = down_y + 64
   draw_text(cr, string.format('Up   %s/s', format_speed(upspeed, 'B')), x + 32, up_y, 15, 1)
   draw_text_right(cr, string.format('Total %s', totalup ~= '' and totalup or '0B'), x + 440, up_y, 15, 0.85)
   draw_graph(cr, x + 32, up_y + 10, 408, 34, network_graphs.tx_history, 0.95, 0.68, 0.46)
 
   if tonumber(signal) and tonumber(signal) > 0 then
-    local signal_y = up_y + 56
+    local signal_y = up_y + 64
     draw_text(cr, 'Signal', x + 32, signal_y, 15, 0.95)
     draw_text_right(cr, string.format('%s%%', signal), x + 440, signal_y, 15, 0.95)
     draw_bar(cr, x + 95, signal_y - 11, 280, 8, tonumber(signal))
