@@ -678,12 +678,12 @@ function conky_cpu_monitor()
 
   local panel_w = 500
   local panel_h = 2030
-  local x = (conky_window.width - panel_w) / 2
+  local x = SHOW_PANEL_SHELL and ((conky_window.width - panel_w) / 2) or 0
   local y = (conky_window.height - panel_h) / 2
 
   local cpu_total = parse_number(conky_parse('${cpu cpu0}'))
   local cpu_count = read_cpu_count()
-  local cpu_model = ellipsize(read_cpu_model(), 34)
+  local cpu_model = ellipsize(read_cpu_model(), 50)
   local load_1, load_5, load_15 = read_loadavg()
   local uptime = format_uptime()
   local host_name = conky_parse('${nodename}')
@@ -694,8 +694,7 @@ function conky_cpu_monitor()
   local today_info = os.date('*t')
   local month_grid = build_month_grid(today_info.year, today_info.month)
   local month_title = os.date('%B %Y')
-  local current_time = conky_parse('${time %I:%M %p}')
-  local current_date = conky_parse('${time %A, %b %d %Y}')
+  local current_datetime = conky_parse('${time %I:%M %p}') .. '  ' .. conky_parse('${time %A, %B %d %Y}')
   local meminfo = read_meminfo()
   local mem_total = meminfo.MemTotal or 0
   local mem_available = meminfo.MemAvailable or 0
@@ -729,11 +728,10 @@ function conky_cpu_monitor()
   end
 
   local datetime_y = y + 46
-  draw_text(cr, current_time, x + 32, datetime_y, 30, 1, true)
-  draw_text(cr, current_date, x + 32, datetime_y + 30, 15, 0.9)
-  draw_divider(cr, x + 30, datetime_y + 46, x + panel_w - 30, 0.35)
+  draw_text(cr, current_datetime, x + 32, datetime_y, 24, 1, true)
+  draw_divider(cr, x + 30, datetime_y + 16, x + panel_w - 30, 0.35)
 
-  local system_y = y + 116
+  local system_y = y + 86
   draw_text(cr, 'System', x + 32, system_y, 18, 1)
   draw_text(cr, string.format('Host %s', ellipsize(host_name, 18)), x + 32, system_y + 28, 15, 0.95)
   draw_text(cr, string.format('OS %s', ellipsize(os_name, 24)), x + 32, system_y + 54, 15, 0.95)
@@ -744,7 +742,7 @@ function conky_cpu_monitor()
   draw_divider(cr, x + 30, system_y + 98, x + panel_w - 30)
 
   local cpu_summary_y = system_y + 138
-  draw_text(cr, cpu_model, x + 32, cpu_summary_y + 4, 18, 0.98, true)
+  draw_text(cr, cpu_model, x + 32, cpu_summary_y + 4, 16, 0.98, false)
   draw_text(
     cr,
     string.format('%d cores   load %s %s %s   up %s', cpu_count, load_1, load_5, load_15, uptime),
