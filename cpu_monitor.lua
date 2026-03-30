@@ -676,7 +676,7 @@ function conky_cpu_monitor()
   )
   local cr = cairo_create(cs)
 
-  local panel_w = 500
+  local panel_w = 472
   local panel_h = 2030
   local x = SHOW_PANEL_SHELL and ((conky_window.width - panel_w) / 2) or 0
   local y = (conky_window.height - panel_h) / 2
