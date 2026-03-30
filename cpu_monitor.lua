@@ -661,17 +661,17 @@ local function draw_drive_row(cr, x, y, width, entry)
     cr,
     string.format('Used %s / %s', format_bytes(entry.used), format_bytes(entry.total)),
     x,
-    y + 34,
+    y + 40,
     14,
     0.9
   )
 
   cairo_set_source_rgba(cr, 1, 1, 1, 0.14)
   cairo_set_line_width(cr, 1)
-  cairo_move_to(cr, x, y + 46)
-  cairo_line_to(cr, x + width, y + 46)
+  cairo_move_to(cr, x, y + 52)
+  cairo_line_to(cr, x + width, y + 52)
   cairo_stroke(cr)
-  return 56
+  return 62
 end
 
 function conky_cpu_monitor()
