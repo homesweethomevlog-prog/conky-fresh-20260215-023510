@@ -185,6 +185,24 @@ local function read_meminfo()
   return info
 end
 
+local function read_os_pretty_name()
+  local handle = io.open('/etc/os-release', 'r')
+  if not handle then
+    return 'Linux'
+  end
+
+  for line in handle:lines() do
+    local value = line:match('^PRETTY_NAME="?(.-)"?$')
+    if value and value ~= '' then
+      handle:close()
+      return value
+    end
+  end
+
+  handle:close()
+  return 'Linux'
+end
+
 local function format_uptime()
   local content = read_file('/proc/uptime') or ''
   local seconds = tonumber(content:match('([%d%.]+)')) or 0
@@ -461,7 +479,7 @@ function conky_cpu_monitor()
   local cr = cairo_create(cs)
 
   local panel_w = 500
-  local panel_h = 1400
+  local panel_h = 1500
   local x = (conky_window.width - panel_w) / 2
   local y = (conky_window.height - panel_h) / 2
 
@@ -470,6 +488,11 @@ function conky_cpu_monitor()
   local cpu_model = ellipsize(read_cpu_model(), 34)
   local load_1, load_5, load_15 = read_loadavg()
   local uptime = format_uptime()
+  local host_name = conky_parse('${nodename}')
+  local kernel = conky_parse('${kernel}')
+  local machine = conky_parse('${machine}')
+  local desktop = os.getenv('XDG_CURRENT_DESKTOP') or os.getenv('DESKTOP_SESSION') or 'Linux'
+  local os_name = read_os_pretty_name()
   local meminfo = read_meminfo()
   local mem_total = meminfo.MemTotal or 0
   local mem_available = meminfo.MemAvailable or 0
@@ -497,21 +520,32 @@ function conky_cpu_monitor()
   local cpu_graph = update_cpu_graph(cpu_total)
 
   draw_panel(cr, x, y, panel_w, panel_h)
-  draw_circle(cr, x + 34, y + 50, 10, 0.98, 0.47, 0.28, 1)
-  draw_text(cr, string.format('%d%%', math.floor(cpu_total + 0.5)), x + 70, y + 54, 34, 1)
-  draw_text(cr, cpu_model, x + 190, y + 46, 15, 0.95)
+
+  local system_y = y + 50
+  draw_text(cr, 'System', x + 32, system_y, 18, 1)
+  draw_text(cr, string.format('Host %s', ellipsize(host_name, 18)), x + 32, system_y + 28, 15, 0.95)
+  draw_text(cr, string.format('OS %s', ellipsize(os_name, 24)), x + 32, system_y + 54, 15, 0.95)
+  draw_text(cr, string.format('Kernel %s', ellipsize(kernel, 18)), x + 255, system_y + 28, 15, 0.9)
+  draw_text(cr, string.format('Desktop %s', ellipsize(desktop, 14)), x + 255, system_y + 54, 15, 0.9)
+  draw_text(cr, string.format('Arch %s', machine ~= '' and machine or 'unknown'), x + 32, system_y + 80, 15, 0.85)
+  draw_text(cr, string.format('Processes %s', conky_parse('${running_processes}')), x + 255, system_y + 80, 15, 0.85)
+  draw_divider(cr, x + 30, system_y + 98, x + panel_w - 30)
+
+  local cpu_summary_y = system_y + 138
+  draw_circle(cr, x + 34, cpu_summary_y, 10, 0.98, 0.47, 0.28, 1)
+  draw_text(cr, string.format('%d%%', math.floor(cpu_total + 0.5)), x + 70, cpu_summary_y + 4, 34, 1)
+  draw_text(cr, cpu_model, x + 190, cpu_summary_y - 4, 15, 0.95)
   draw_text(
     cr,
     string.format('%d cores   load %s %s %s   up %s', cpu_count, load_1, load_5, load_15, uptime),
     x + 32,
-    y + 92,
+    cpu_summary_y + 42,
     15,
     0.88
   )
+  draw_divider(cr, x + 30, cpu_summary_y + 58, x + panel_w - 30, 0.35)
 
-  draw_divider(cr, x + 30, y + 108, x + panel_w - 30, 0.35)
-
-  local cpu_graph_y = y + 126
+  local cpu_graph_y = cpu_summary_y + 76
   draw_text(cr, 'CPU History', x + 32, cpu_graph_y, 16, 0.95)
   draw_text(cr, string.format('%d%%', math.floor(cpu_total + 0.5)), x + 404, cpu_graph_y, 16, 0.95)
   draw_graph(cr, x + 32, cpu_graph_y + 10, 408, 42, cpu_graph, 0.98, 0.47, 0.28)
@@ -519,7 +553,7 @@ function conky_cpu_monitor()
 
   local visible_cores = math.min(math.max(cpu_count, 1), 8)
   local process_count = 10
-  local row_y = y + 204
+  local row_y = cpu_graph_y + 78
   local row_h = 28
 
   for core = 1, visible_cores do
