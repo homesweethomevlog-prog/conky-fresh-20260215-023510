@@ -67,12 +67,12 @@ local function draw_divider(cr, x1, y, x2, alpha)
   cairo_stroke(cr)
 end
 
-local function draw_graph(cr, x, y, width, height, history, r, g, b)
+local function draw_graph(cr, x, y, width, height, history, r, g, b, floor_max)
   cairo_set_source_rgba(cr, 1, 1, 1, 0.10)
   cairo_rectangle(cr, x, y, width, height)
   cairo_fill(cr)
 
-  local max_value = 64 * 1024
+  local max_value = floor_max or (64 * 1024)
   for _, value in ipairs(history) do
     if value > max_value then
       max_value = value
@@ -740,9 +740,7 @@ function conky_cpu_monitor()
   draw_divider(cr, x + 30, system_y + 98, x + panel_w - 30)
 
   local cpu_summary_y = system_y + 138
-  draw_circle(cr, x + 34, cpu_summary_y, 10, 0.98, 0.47, 0.28, 1)
-  draw_text(cr, string.format('%d%%', math.floor(cpu_total + 0.5)), x + 70, cpu_summary_y + 4, 34, 1)
-  draw_text(cr, cpu_model, x + 190, cpu_summary_y - 4, 15, 0.95)
+  draw_text(cr, cpu_model, x + 32, cpu_summary_y + 4, 18, 0.98, true)
   draw_text(
     cr,
     string.format('%d cores   load %s %s %s   up %s', cpu_count, load_1, load_5, load_15, uptime),
@@ -756,7 +754,7 @@ function conky_cpu_monitor()
   local cpu_graph_y = cpu_summary_y + 76
   draw_text(cr, 'CPU History', x + 32, cpu_graph_y, 16, 0.95)
   draw_text(cr, string.format('%d%%', math.floor(cpu_total + 0.5)), x + 404, cpu_graph_y, 16, 0.95)
-  draw_graph(cr, x + 32, cpu_graph_y + 10, 408, 42, cpu_graph, 0.98, 0.47, 0.28)
+  draw_graph(cr, x + 32, cpu_graph_y + 10, 408, 42, cpu_graph, 0.98, 0.47, 0.28, 100)
   draw_divider(cr, x + 30, cpu_graph_y + 66, x + panel_w - 30)
 
   local visible_cores = math.min(math.max(cpu_count, 1), 8)
@@ -847,12 +845,12 @@ function conky_cpu_monitor()
   draw_text(cr, ellipsize(iface, 14), x + 390, network_y, 16, 0.95)
 
   local network_row_y = network_y + 30
-  draw_text(cr, string.format('IP %s', ip_addr ~= '' and ip_addr or 'Unavailable'), x + 32, network_row_y, 15, 0.95)
   if essid ~= '' and essid ~= iface then
-    draw_text(cr, ellipsize(essid, 18), x + 290, network_row_y, 15, 0.85)
+    draw_text(cr, ellipsize(essid, 28), x + 32, network_row_y, 15, 0.9)
   end
+  draw_text(cr, string.format('IP %s', ip_addr ~= '' and ip_addr or 'Unavailable'), x + 32, network_row_y + 24, 15, 0.95)
 
-  local down_y = network_row_y + 28
+  local down_y = network_row_y + 52
   draw_text(cr, string.format('Down %s/s', format_speed(downspeed, 'B')), x + 32, down_y, 15, 1)
   draw_text(cr, string.format('Total %s', totaldown ~= '' and totaldown or '0B'), x + 282, down_y, 15, 0.85)
   draw_graph(cr, x + 32, down_y + 10, 408, 34, network_graphs.rx_history, 0.98, 0.47, 0.28)
