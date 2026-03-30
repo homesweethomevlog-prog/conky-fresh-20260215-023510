@@ -729,7 +729,7 @@ function conky_cpu_monitor()
 
   local datetime_y = y + 46
   draw_text(cr, current_datetime, x + 32, datetime_y, 24, 1, true)
-  draw_divider(cr, x + 30, datetime_y + 16, x + panel_w - 30, 0.35)
+  draw_divider(cr, x + 30, datetime_y + 16, x + 440, 0.35)
 
   local system_y = y + 86
   draw_text(cr, 'System', x + 32, system_y, 18, 1)
@@ -739,7 +739,7 @@ function conky_cpu_monitor()
   draw_text(cr, string.format('Desktop %s', ellipsize(desktop, 14)), x + 255, system_y + 54, 15, 0.9)
   draw_text(cr, string.format('Arch %s', machine ~= '' and machine or 'unknown'), x + 32, system_y + 80, 15, 0.85)
   draw_text(cr, string.format('Processes %s', conky_parse('${running_processes}')), x + 255, system_y + 80, 15, 0.85)
-  draw_divider(cr, x + 30, system_y + 98, x + panel_w - 30)
+  draw_divider(cr, x + 30, system_y + 98, x + 440)
 
   local cpu_summary_y = system_y + 138
   draw_text(cr, cpu_model, x + 32, cpu_summary_y + 4, 16, 0.98, false)
@@ -751,13 +751,13 @@ function conky_cpu_monitor()
     15,
     0.88
   )
-  draw_divider(cr, x + 30, cpu_summary_y + 58, x + panel_w - 30, 0.35)
+  draw_divider(cr, x + 30, cpu_summary_y + 58, x + 440, 0.35)
 
   local cpu_graph_y = cpu_summary_y + 76
   draw_text(cr, 'CPU History', x + 32, cpu_graph_y, 16, 0.95)
   draw_text(cr, string.format('%d%%', math.floor(cpu_total + 0.5)), x + 404, cpu_graph_y, 16, 0.95)
   draw_graph(cr, x + 32, cpu_graph_y + 10, 408, 42, cpu_graph, 0.98, 0.47, 0.28, 100)
-  draw_divider(cr, x + 30, cpu_graph_y + 66, x + panel_w - 30)
+  draw_divider(cr, x + 30, cpu_graph_y + 66, x + 440)
 
   local visible_cores = math.min(math.max(cpu_count, 1), 8)
   local process_count = 10
@@ -773,7 +773,7 @@ function conky_cpu_monitor()
     draw_bar(cr, x + 148, current_y - 14, 220, 10, usage)
     draw_text(cr, string.format('%3d%%', math.floor(usage + 0.5)), x + 388, current_y, 16, 1)
 
-    draw_divider(cr, x + 30, current_y + 12, x + panel_w - 30)
+    draw_divider(cr, x + 30, current_y + 12, x + 440)
   end
 
   local memory_y = row_y + visible_cores * row_h + 26
@@ -815,7 +815,7 @@ function conky_cpu_monitor()
     0.82
   )
 
-  draw_divider(cr, x + 30, ram_bar_y + 86, x + panel_w - 30)
+  draw_divider(cr, x + 30, ram_bar_y + 86, x + 440)
 
   local storage_y = ram_bar_y + 120
   draw_text(cr, 'Storage', x + 32, storage_y, 18, 1)
@@ -840,7 +840,7 @@ function conky_cpu_monitor()
   draw_text(cr, string.format('R %s/s', format_bytes(current_read)), x + 180, disk_io_y, 14, 0.9)
   draw_text(cr, string.format('W %s/s', format_bytes(current_write)), x + 318, disk_io_y, 14, 0.9)
   draw_dual_graph(cr, x + 32, disk_io_y + 10, 408, 36, disk_graphs.read_history, disk_graphs.write_history)
-  draw_divider(cr, x + 30, disk_io_y + 54, x + panel_w - 30)
+  draw_divider(cr, x + 30, disk_io_y + 54, x + 440)
 
   local network_y = disk_io_y + 80
   draw_text(cr, 'Network', x + 32, network_y, 18, 1)
@@ -872,7 +872,7 @@ function conky_cpu_monitor()
     up_y = up_y + 30
   end
 
-  draw_divider(cr, x + 30, up_y + 22, x + panel_w - 30)
+  draw_divider(cr, x + 30, up_y + 22, x + 440)
 
   local processes_y = up_y + 56
   draw_text(cr, 'Top Processes', x + 32, processes_y, 18, 1)
@@ -892,7 +892,7 @@ function conky_cpu_monitor()
     draw_text(cr, string.format('%s%%', cpu ~= '' and cpu or '0'), x + 334, current_y, 15, 1)
     draw_text(cr, string.format('%s%%', mem ~= '' and mem or '0'), x + 402, current_y, 15, 1)
 
-    draw_divider(cr, x + 30, current_y + 12, x + panel_w - 30)
+    draw_divider(cr, x + 30, current_y + 12, x + 440)
   end
 
   local calendar_y = process_row_y + process_count * process_row_h + 22
@@ -936,7 +936,7 @@ function conky_cpu_monitor()
   end
 
   local calendar_bottom_y = calendar_grid_y + 20 + (6 * calendar_cell_h)
-  draw_divider(cr, x + 30, calendar_bottom_y + 6, x + panel_w - 30)
+  draw_divider(cr, x + 30, calendar_bottom_y + 6, x + 440)
 
   local weather_y = calendar_bottom_y + 26
   draw_text(cr, 'Weather', x + 32, weather_y, 18, 1)
