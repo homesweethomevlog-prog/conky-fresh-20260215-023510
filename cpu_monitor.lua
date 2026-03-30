@@ -22,8 +22,9 @@ local function draw_panel(cr, x, y, width, height)
   cairo_stroke(cr)
 end
 
-local function draw_text(cr, text, x, y, size, alpha)
-  cairo_select_font_face(cr, 'JetBrainsMono Nerd Font', CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL)
+local function draw_text(cr, text, x, y, size, alpha, bold)
+  local weight = bold and CAIRO_FONT_WEIGHT_BOLD or CAIRO_FONT_WEIGHT_NORMAL
+  cairo_select_font_face(cr, 'JetBrainsMono Nerd Font', CAIRO_FONT_SLANT_NORMAL, weight)
   cairo_set_font_size(cr, size)
   cairo_set_source_rgba(cr, 1, 1, 1, alpha or 1)
   cairo_move_to(cr, x, y)
@@ -201,6 +202,50 @@ local function read_os_pretty_name()
 
   handle:close()
   return 'Linux'
+end
+
+local function is_leap_year(year)
+  if year % 400 == 0 then
+    return true
+  end
+  if year % 100 == 0 then
+    return false
+  end
+  return year % 4 == 0
+end
+
+local function days_in_month(year, month)
+  local month_lengths = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+  if month == 2 and is_leap_year(year) then
+    return 29
+  end
+  return month_lengths[month]
+end
+
+local function build_month_grid(year, month)
+  local grid = {}
+  for row = 1, 6 do
+    grid[row] = { nil, nil, nil, nil, nil, nil, nil }
+  end
+
+  local first_day_wday = tonumber(os.date('%w', os.time({ year = year, month = month, day = 1 }))) + 1
+  local total_days = days_in_month(year, month)
+
+  local row = 1
+  local col = first_day_wday
+  for day = 1, total_days do
+    grid[row][col] = day
+    col = col + 1
+    if col > 7 then
+      col = 1
+      row = row + 1
+      if row > 6 then
+        break
+      end
+    end
+  end
+
+  return grid
 end
 
 local function format_uptime()
@@ -479,7 +524,7 @@ function conky_cpu_monitor()
   local cr = cairo_create(cs)
 
   local panel_w = 500
-  local panel_h = 1500
+  local panel_h = 1780
   local x = (conky_window.width - panel_w) / 2
   local y = (conky_window.height - panel_h) / 2
 
@@ -493,6 +538,9 @@ function conky_cpu_monitor()
   local machine = conky_parse('${machine}')
   local desktop = os.getenv('XDG_CURRENT_DESKTOP') or os.getenv('DESKTOP_SESSION') or 'Linux'
   local os_name = read_os_pretty_name()
+  local today_info = os.date('*t')
+  local month_grid = build_month_grid(today_info.year, today_info.month)
+  local month_title = os.date('%B %Y')
   local meminfo = read_meminfo()
   local mem_total = meminfo.MemTotal or 0
   local mem_available = meminfo.MemAvailable or 0
@@ -688,6 +736,46 @@ function conky_cpu_monitor()
     draw_text(cr, string.format('%s%%', mem ~= '' and mem or '0'), x + 402, current_y, 15, 1)
 
     draw_divider(cr, x + 30, current_y + 12, x + panel_w - 30)
+  end
+
+  local calendar_y = process_row_y + process_count * process_row_h + 28
+  draw_text(cr, 'Calendar', x + 32, calendar_y, 18, 1)
+  draw_text(cr, month_title, x + 315, calendar_y, 15, 0.9)
+
+  local headers = { 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' }
+  local calendar_grid_x = x + 32
+  local calendar_grid_y = calendar_y + 24
+  local calendar_cell_w = 58
+  local calendar_cell_h = 34
+
+  for col = 1, 7 do
+    draw_text(cr, headers[col], calendar_grid_x + (col - 1) * calendar_cell_w + 6, calendar_grid_y + 16, 13, 0.9)
+  end
+
+  for row = 1, 6 do
+    for col = 1, 7 do
+      local day_num = month_grid[row][col]
+      if day_num then
+        local cell_x = calendar_grid_x + (col - 1) * calendar_cell_w
+        local cell_y = calendar_grid_y + 22 + (row - 1) * calendar_cell_h
+        local is_today = day_num == today_info.day
+
+        if is_today then
+          cairo_set_source_rgba(cr, 0.98, 0.47, 0.28, 0.32)
+        else
+          cairo_set_source_rgba(cr, 1, 1, 1, 0.06)
+        end
+        cairo_rectangle(cr, cell_x + 2, cell_y + 2, calendar_cell_w - 4, calendar_cell_h - 4)
+        cairo_fill(cr)
+
+        cairo_set_source_rgba(cr, 1, 1, 1, is_today and 0.35 or 0.16)
+        cairo_set_line_width(cr, 1)
+        cairo_rectangle(cr, cell_x + 2, cell_y + 2, calendar_cell_w - 4, calendar_cell_h - 4)
+        cairo_stroke(cr)
+
+        draw_text(cr, tostring(day_num), cell_x + 18, cell_y + 22, 16, 1, is_today)
+      end
+    end
   end
 
   cairo_destroy(cr)
