@@ -6,10 +6,20 @@ local drive_cache = {
 }
 
 local network_graph_cache = {}
+local disk_graph_cache = {
+  timestamp = 0,
+  devices_key = '',
+  devices = {},
+  read_bytes = {},
+  write_bytes = {},
+  read_history = {},
+  write_history = {},
+}
 local cpu_graph_cache = {
   timestamp = 0,
   history = {},
 }
+local trim_history
 
 local function draw_panel(cr, x, y, width, height)
   cairo_set_source_rgba(cr, 1, 1, 1, 0.10)
@@ -96,6 +106,51 @@ local function draw_graph(cr, x, y, width, height, history, r, g, b)
     end
     cairo_stroke(cr)
   end
+
+  cairo_set_source_rgba(cr, 1, 1, 1, 0.18)
+  cairo_rectangle(cr, x, y, width, height)
+  cairo_stroke(cr)
+end
+
+local function draw_dual_graph(cr, x, y, width, height, first_history, second_history)
+  cairo_set_source_rgba(cr, 1, 1, 1, 0.10)
+  cairo_rectangle(cr, x, y, width, height)
+  cairo_fill(cr)
+
+  local max_value = 128 * 1024
+  for _, value in ipairs(first_history) do
+    if value > max_value then
+      max_value = value
+    end
+  end
+  for _, value in ipairs(second_history) do
+    if value > max_value then
+      max_value = value
+    end
+  end
+
+  local function stroke_history(history, r, g, b, alpha)
+    if #history <= 1 then
+      return
+    end
+
+    local step_x = width / (#history - 1)
+    cairo_set_source_rgba(cr, r, g, b, alpha)
+    cairo_set_line_width(cr, 1.4)
+    for index, value in ipairs(history) do
+      local px = x + (index - 1) * step_x
+      local py = y + height - ((value / max_value) * height)
+      if index == 1 then
+        cairo_move_to(cr, px, py)
+      else
+        cairo_line_to(cr, px, py)
+      end
+    end
+    cairo_stroke(cr)
+  end
+
+  stroke_history(first_history, 0.98, 0.47, 0.28, 0.95)
+  stroke_history(second_history, 0.95, 0.76, 0.48, 0.95)
 
   cairo_set_source_rgba(cr, 1, 1, 1, 0.18)
   cairo_rectangle(cr, x, y, width, height)
@@ -248,6 +303,19 @@ local function build_month_grid(year, month)
   return grid
 end
 
+local function first_nonempty_line(text)
+  if not text or text == '' then
+    return ''
+  end
+
+  for line in (text .. '\n'):gmatch('(.-)\n') do
+    if line ~= '' then
+      return line
+    end
+  end
+  return ''
+end
+
 local function format_uptime()
   local content = read_file('/proc/uptime') or ''
   local seconds = tonumber(content:match('([%d%.]+)')) or 0
@@ -360,6 +428,89 @@ local function collect_external_entries(entries)
   return results
 end
 
+local function basename(path)
+  return (path or ''):match('([^/]+)$') or path or ''
+end
+
+local function collect_block_devices(entries)
+  local devices = {}
+  local seen = {}
+
+  for _, entry in ipairs(entries) do
+    local filesystem = entry.filesystem or ''
+    if filesystem:match('^/dev/') then
+      local device = basename(filesystem)
+      if device ~= '' and not seen[device] then
+        seen[device] = true
+        table.insert(devices, device)
+      end
+    end
+  end
+
+  table.sort(devices)
+  return devices
+end
+
+local function read_device_bytes(device)
+  local stat_line = first_line('/sys/class/block/' .. device .. '/stat') or ''
+  local values = {}
+  for value in stat_line:gmatch('%S+') do
+    table.insert(values, tonumber(value) or 0)
+  end
+
+  local read_sectors = values[3] or 0
+  local write_sectors = values[7] or 0
+  return read_sectors * 512, write_sectors * 512
+end
+
+local function update_disk_graphs(entries)
+  local devices = collect_block_devices(entries)
+  local devices_key = table.concat(devices, ',')
+  local now = os.time()
+
+  if disk_graph_cache.devices_key ~= devices_key then
+    disk_graph_cache = {
+      timestamp = 0,
+      devices_key = devices_key,
+      devices = devices,
+      read_bytes = {},
+      write_bytes = {},
+      read_history = {},
+      write_history = {},
+    }
+    for _, device in ipairs(devices) do
+      local read_bytes, write_bytes = read_device_bytes(device)
+      disk_graph_cache.read_bytes[device] = read_bytes
+      disk_graph_cache.write_bytes[device] = write_bytes
+    end
+  end
+
+  if disk_graph_cache.timestamp ~= 0 and now > disk_graph_cache.timestamp then
+    local elapsed = now - disk_graph_cache.timestamp
+    local total_read_rate = 0
+    local total_write_rate = 0
+
+    for _, device in ipairs(disk_graph_cache.devices) do
+      local read_bytes, write_bytes = read_device_bytes(device)
+      total_read_rate = total_read_rate + math.max(0, read_bytes - (disk_graph_cache.read_bytes[device] or read_bytes)) / elapsed
+      total_write_rate = total_write_rate + math.max(0, write_bytes - (disk_graph_cache.write_bytes[device] or write_bytes)) / elapsed
+      disk_graph_cache.read_bytes[device] = read_bytes
+      disk_graph_cache.write_bytes[device] = write_bytes
+    end
+
+    table.insert(disk_graph_cache.read_history, total_read_rate)
+    table.insert(disk_graph_cache.write_history, total_write_rate)
+    trim_history(disk_graph_cache.read_history, 72)
+    trim_history(disk_graph_cache.write_history, 72)
+  elseif #disk_graph_cache.read_history == 0 then
+    table.insert(disk_graph_cache.read_history, 0)
+    table.insert(disk_graph_cache.write_history, 0)
+  end
+
+  disk_graph_cache.timestamp = now
+  return disk_graph_cache
+end
+
 local function drive_label(entry)
   if not entry then
     return 'Unavailable'
@@ -424,7 +575,7 @@ local function read_counter_bytes(iface, counter)
   return tonumber(read_file(string.format('/sys/class/net/%s/statistics/%s_bytes', iface, counter))) or 0
 end
 
-local function trim_history(history, max_points)
+trim_history = function(history, max_points)
   while #history > max_points do
     table.remove(history, 1)
   end
@@ -524,7 +675,7 @@ function conky_cpu_monitor()
   local cr = cairo_create(cs)
 
   local panel_w = 500
-  local panel_h = 1780
+  local panel_h = 1950
   local x = (conky_window.width - panel_w) / 2
   local y = (conky_window.height - panel_h) / 2
 
@@ -548,14 +699,11 @@ function conky_cpu_monitor()
   local mem_percent = mem_total > 0 and (mem_used / mem_total) * 100 or 0
   local mem_cached = (meminfo.Cached or 0) + (meminfo.SReclaimable or 0)
   local mem_buffers = meminfo.Buffers or 0
-  local swap_total = meminfo.SwapTotal or 0
-  local swap_free = meminfo.SwapFree or 0
-  local swap_used = math.max(swap_total - swap_free, 0)
-  local swap_percent = swap_total > 0 and (swap_used / swap_total) * 100 or 0
   local drive_entries = read_drive_entries()
   local root_drive = find_mount_entry(drive_entries, '/')
   local home_drive = find_mount_entry(drive_entries, '/home')
   local external_drives = collect_external_entries(drive_entries)
+  local disk_graphs = update_disk_graphs(drive_entries)
   local iface = detect_primary_interface()
   local ip_addr = conky_parse(string.format('${addr %s}', iface))
   local downspeed = conky_parse(string.format('${downspeedf %s}', iface))
@@ -564,6 +712,11 @@ function conky_cpu_monitor()
   local totalup = conky_parse(string.format('${totalup %s}', iface))
   local signal = conky_parse(string.format('${wireless_link_qual_perc %s}', iface))
   local essid = conky_parse(string.format('${wireless_essid %s}', iface))
+  local weather_summary = conky_parse('${execi 1800 python3 ~/.conky/weather_bbc.py summary_icon}')
+  local weather_details = conky_parse('${execi 1800 python3 ~/.conky/weather_bbc.py details}')
+  local weather_daily = conky_parse('${execi 1800 python3 ~/.conky/weather_bbc_7day.py}')
+  local today_weather_line = first_nonempty_line(weather_daily)
+  local today_label, today_max, today_min, today_condition = today_weather_line:match('([^|]+)|([^|]+)|([^|]+)|(.+)')
   local network_graphs = update_network_graphs(iface)
   local cpu_graph = update_cpu_graph(cpu_total)
 
@@ -655,21 +808,9 @@ function conky_cpu_monitor()
     0.82
   )
 
-  local swap_y = ram_bar_y + 84
-  draw_text(cr, 'Swap', x + 32, swap_y, 16, 0.95)
-  draw_text(
-    cr,
-    string.format('%s / %s', format_gib_from_kib(swap_used), format_gib_from_kib(swap_total)),
-    x + 338,
-    swap_y,
-    15,
-    0.95
-  )
-  draw_bar(cr, x + 32, swap_y + 12, 408, 8, swap_percent)
+  draw_divider(cr, x + 30, ram_bar_y + 86, x + panel_w - 30)
 
-  draw_divider(cr, x + 30, swap_y + 34, x + panel_w - 30)
-
-  local storage_y = swap_y + 68
+  local storage_y = ram_bar_y + 120
   draw_text(cr, 'Storage', x + 32, storage_y, 18, 1)
 
   local drive_y = storage_y + 28
@@ -685,7 +826,16 @@ function conky_cpu_monitor()
     end
   end
 
-  local network_y = drive_y + 26
+  local disk_io_y = drive_y + 22
+  local current_read = disk_graphs.read_history[#disk_graphs.read_history] or 0
+  local current_write = disk_graphs.write_history[#disk_graphs.write_history] or 0
+  draw_text(cr, 'Disk I/O', x + 32, disk_io_y, 16, 0.95)
+  draw_text(cr, string.format('R %s/s', format_bytes(current_read)), x + 180, disk_io_y, 14, 0.9)
+  draw_text(cr, string.format('W %s/s', format_bytes(current_write)), x + 318, disk_io_y, 14, 0.9)
+  draw_dual_graph(cr, x + 32, disk_io_y + 10, 408, 36, disk_graphs.read_history, disk_graphs.write_history)
+  draw_divider(cr, x + 30, disk_io_y + 54, x + panel_w - 30)
+
+  local network_y = disk_io_y + 80
   draw_text(cr, 'Network', x + 32, network_y, 18, 1)
   draw_text(cr, ellipsize(iface, 14), x + 390, network_y, 16, 0.95)
 
@@ -738,18 +888,18 @@ function conky_cpu_monitor()
     draw_divider(cr, x + 30, current_y + 12, x + panel_w - 30)
   end
 
-  local calendar_y = process_row_y + process_count * process_row_h + 28
+  local calendar_y = process_row_y + process_count * process_row_h + 22
   draw_text(cr, 'Calendar', x + 32, calendar_y, 18, 1)
   draw_text(cr, month_title, x + 315, calendar_y, 15, 0.9)
 
   local headers = { 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' }
   local calendar_grid_x = x + 32
-  local calendar_grid_y = calendar_y + 24
+  local calendar_grid_y = calendar_y + 20
   local calendar_cell_w = 58
-  local calendar_cell_h = 34
+  local calendar_cell_h = 30
 
   for col = 1, 7 do
-    draw_text(cr, headers[col], calendar_grid_x + (col - 1) * calendar_cell_w + 6, calendar_grid_y + 16, 13, 0.9)
+    draw_text(cr, headers[col], calendar_grid_x + (col - 1) * calendar_cell_w + 6, calendar_grid_y + 14, 13, 0.9)
   end
 
   for row = 1, 6 do
@@ -757,7 +907,7 @@ function conky_cpu_monitor()
       local day_num = month_grid[row][col]
       if day_num then
         local cell_x = calendar_grid_x + (col - 1) * calendar_cell_w
-        local cell_y = calendar_grid_y + 22 + (row - 1) * calendar_cell_h
+        local cell_y = calendar_grid_y + 20 + (row - 1) * calendar_cell_h
         local is_today = day_num == today_info.day
 
         if is_today then
@@ -773,10 +923,34 @@ function conky_cpu_monitor()
         cairo_rectangle(cr, cell_x + 2, cell_y + 2, calendar_cell_w - 4, calendar_cell_h - 4)
         cairo_stroke(cr)
 
-        draw_text(cr, tostring(day_num), cell_x + 18, cell_y + 22, 16, 1, is_today)
+        draw_text(cr, tostring(day_num), cell_x + 18, cell_y + 20, 16, 1, is_today)
       end
     end
   end
+
+  local calendar_bottom_y = calendar_grid_y + 20 + (6 * calendar_cell_h)
+  draw_divider(cr, x + 30, calendar_bottom_y + 6, x + panel_w - 30)
+
+  local weather_y = calendar_bottom_y + 26
+  draw_text(cr, 'Weather', x + 32, weather_y, 18, 1)
+  draw_text(cr, 'Bacoor, Cavite', x + 300, weather_y, 15, 0.85)
+  draw_text(cr, ellipsize(weather_summary ~= '' and weather_summary or 'Unavailable', 38), x + 32, weather_y + 26, 16, 0.98)
+
+  if today_label and today_max and today_min then
+    draw_text(
+      cr,
+      string.format('%s  %s° / %s°', today_label, today_max, today_min),
+      x + 32,
+      weather_y + 50,
+      15,
+      0.95
+    )
+    draw_text(cr, ellipsize(today_condition or '', 18), x + 250, weather_y + 50, 15, 0.82)
+  else
+    draw_text(cr, 'Today forecast unavailable', x + 32, weather_y + 50, 15, 0.85)
+  end
+
+  draw_text(cr, ellipsize(weather_details ~= '' and weather_details or 'Weather details unavailable', 46), x + 32, weather_y + 74, 14, 0.8)
 
   cairo_destroy(cr)
   cairo_surface_destroy(cs)
