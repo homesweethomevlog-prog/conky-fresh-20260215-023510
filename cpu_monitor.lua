@@ -675,7 +675,7 @@ function conky_cpu_monitor()
   local cr = cairo_create(cs)
 
   local panel_w = 500
-  local panel_h = 1950
+  local panel_h = 2030
   local x = (conky_window.width - panel_w) / 2
   local y = (conky_window.height - panel_h) / 2
 
@@ -692,6 +692,8 @@ function conky_cpu_monitor()
   local today_info = os.date('*t')
   local month_grid = build_month_grid(today_info.year, today_info.month)
   local month_title = os.date('%B %Y')
+  local current_time = conky_parse('${time %I:%M %p}')
+  local current_date = conky_parse('${time %A, %b %d %Y}')
   local meminfo = read_meminfo()
   local mem_total = meminfo.MemTotal or 0
   local mem_available = meminfo.MemAvailable or 0
@@ -722,7 +724,12 @@ function conky_cpu_monitor()
 
   draw_panel(cr, x, y, panel_w, panel_h)
 
-  local system_y = y + 50
+  local datetime_y = y + 46
+  draw_text(cr, current_time, x + 32, datetime_y, 30, 1, true)
+  draw_text(cr, current_date, x + 32, datetime_y + 30, 15, 0.9)
+  draw_divider(cr, x + 30, datetime_y + 46, x + panel_w - 30, 0.35)
+
+  local system_y = y + 116
   draw_text(cr, 'System', x + 32, system_y, 18, 1)
   draw_text(cr, string.format('Host %s', ellipsize(host_name, 18)), x + 32, system_y + 28, 15, 0.95)
   draw_text(cr, string.format('OS %s', ellipsize(os_name, 24)), x + 32, system_y + 54, 15, 0.95)
