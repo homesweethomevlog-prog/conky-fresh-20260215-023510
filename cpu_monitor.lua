@@ -943,7 +943,7 @@ function conky_cpu_monitor()
   draw_divider(cr, x + 30, weather_y - 18, x + 440)
   draw_text(cr, 'Weather', x + 32, weather_y, 18, 1)
   draw_text_right(cr, 'Bacoor, Cavite', x + 440, weather_y, 15, 0.85)
-  draw_text(cr, ellipsize(weather_summary ~= '' and weather_summary or 'Unavailable', 38), x + 32, weather_y + 26, 16, 0.98)
+  draw_text(cr, ellipsize(weather_summary ~= '' and weather_summary or 'Unavailable', 44), x + 32, weather_y + 26, 16, 0.98)
 
   if today_label and today_max and today_min then
     draw_text(
@@ -954,7 +954,7 @@ function conky_cpu_monitor()
       15,
       0.95
     )
-    draw_text(cr, ellipsize(today_condition or '', 18), x + 250, weather_y + 50, 15, 0.82)
+    draw_text_right(cr, ellipsize(today_condition or '', 22), x + 440, weather_y + 50, 15, 0.82)
   else
     draw_text(cr, 'Today forecast unavailable', x + 32, weather_y + 50, 15, 0.85)
   end
