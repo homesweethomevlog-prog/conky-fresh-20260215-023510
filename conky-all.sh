@@ -40,4 +40,5 @@ start_if_missing() {
 
 start_if_missing "$(render_main_config)"
 start_if_missing "$BASE_DIR/conky_calendar.conf"
+start_if_missing "$BASE_DIR/conky_cpu.conf"
 start_if_missing "$BASE_DIR/conky_weather.conf"
