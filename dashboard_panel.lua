@@ -674,7 +674,7 @@ local function draw_drive_row(cr, x, y, width, entry)
   return 62
 end
 
-function conky_cpu_monitor()
+function conky_dashboard_panel()
   if conky_window == nil then
     return
   end
@@ -954,7 +954,7 @@ function conky_cpu_monitor()
       15,
       0.95
     )
-    draw_text_right(cr, ellipsize(today_condition or '', 22), x + 440, weather_y + 50, 15, 0.82)
+    draw_text_right(cr, ellipsize(today_condition or '', 28), x + 440, weather_y + 50, 15, 0.82)
   else
     draw_text(cr, 'Today forecast unavailable', x + 32, weather_y + 50, 15, 0.85)
   end
