@@ -7,6 +7,18 @@ local drive_cache = {
 
 local SHOW_PANEL_SHELL = false
 
+local PANEL_WIDTH = 472
+local PANEL_HEIGHT = 2030
+local CONTENT_LEFT = 32
+local CONTENT_RIGHT_INSET = 32
+local CONTENT_RIGHT = PANEL_WIDTH - CONTENT_RIGHT_INSET
+local CONTENT_WIDTH = CONTENT_RIGHT - CONTENT_LEFT
+local DIVIDER_LEFT = 30
+local SECTION_DIVIDER_OFFSET = 18
+local SECTION_TITLE_SIZE = 18
+local SECTION_META_SIZE = 15
+local SECTION_META_ALPHA = 0.9
+
 local network_graph_cache = {}
 local disk_graph_cache = {
   timestamp = 0,
@@ -79,6 +91,29 @@ local function draw_divider(cr, x1, y, x2, alpha)
   cairo_move_to(cr, x1, y)
   cairo_line_to(cr, x2, y)
   cairo_stroke(cr)
+end
+
+local function draw_content_divider(cr, divider_left_x, content_right_x, y, alpha)
+  draw_divider(cr, divider_left_x, y, content_right_x, alpha)
+end
+
+local function draw_section_divider(cr, divider_left_x, content_right_x, next_section_y, alpha)
+  draw_content_divider(cr, divider_left_x, content_right_x, next_section_y - SECTION_DIVIDER_OFFSET, alpha)
+end
+
+local function draw_section_header(cr, content_left_x, content_right_x, y, title, right_text, title_size, right_size, right_alpha)
+  draw_text(cr, title, content_left_x, y, title_size or SECTION_TITLE_SIZE, 1)
+
+  if right_text and right_text ~= '' then
+    draw_text_right(
+      cr,
+      right_text,
+      content_right_x,
+      y,
+      right_size or SECTION_META_SIZE,
+      right_alpha or SECTION_META_ALPHA
+    )
+  end
 end
 
 local function draw_graph(cr, x, y, width, height, history, r, g, b, floor_max)
@@ -668,9 +703,7 @@ local function draw_drive_row(cr, x, y, width, entry)
 
   cairo_set_source_rgba(cr, 1, 1, 1, 0.14)
   cairo_set_line_width(cr, 1)
-  cairo_move_to(cr, x, y + 52)
-  cairo_line_to(cr, x + width, y + 52)
-  cairo_stroke(cr)
+  draw_content_divider(cr, x, x + width, y + 52)
   return 62
 end
 
@@ -688,10 +721,13 @@ function conky_dashboard_panel()
   )
   local cr = cairo_create(cs)
 
-  local panel_w = 472
-  local panel_h = 2030
+  local panel_w = PANEL_WIDTH
+  local panel_h = PANEL_HEIGHT
   local x = SHOW_PANEL_SHELL and ((conky_window.width - panel_w) / 2) or 0
   local y = (conky_window.height - panel_h) / 2
+  local content_left = x + CONTENT_LEFT
+  local content_right = x + CONTENT_RIGHT
+  local divider_left = x + DIVIDER_LEFT
 
   local cpu_total = parse_number(conky_parse('${cpu cpu0}'))
   local cpu_count = read_cpu_count()
@@ -741,35 +777,34 @@ function conky_dashboard_panel()
 
   local datetime_y = y + 46
   local system_y = y + 86
-  draw_text(cr, current_datetime, x + 32, datetime_y, 24, 1, true)
-  draw_divider(cr, x + 30, system_y - 18, x + 440, 0.35)
+  draw_text(cr, current_datetime, content_left, datetime_y, 24, 1, true)
+  draw_section_divider(cr, divider_left, content_right, system_y, 0.35)
 
-  draw_text(cr, 'System', x + 32, system_y, 18, 1)
-  draw_text(cr, string.format('Host %s', ellipsize(host_name, 18)), x + 32, system_y + 28, 15, 0.95)
-  draw_text(cr, string.format('OS %s', ellipsize(os_name, 24)), x + 32, system_y + 54, 15, 0.95)
-  draw_text_right(cr, string.format('Kernel %s', ellipsize(kernel, 18)), x + 440, system_y + 28, 15, 0.9)
-  draw_text_right(cr, string.format('Desktop %s', ellipsize(desktop, 14)), x + 440, system_y + 54, 15, 0.9)
-  draw_text(cr, string.format('Arch %s', machine ~= '' and machine or 'unknown'), x + 32, system_y + 80, 15, 0.85)
-  draw_text_right(cr, string.format('Processes %s', conky_parse('${running_processes}')), x + 440, system_y + 80, 15, 0.85)
+  draw_section_header(cr, content_left, content_right, system_y, 'System')
+  draw_text(cr, string.format('Host %s', ellipsize(host_name, 18)), content_left, system_y + 28, 15, 0.95)
+  draw_text(cr, string.format('OS %s', ellipsize(os_name, 24)), content_left, system_y + 54, 15, 0.95)
+  draw_text_right(cr, string.format('Kernel %s', ellipsize(kernel, 18)), content_right, system_y + 28, 15, 0.9)
+  draw_text_right(cr, string.format('Desktop %s', ellipsize(desktop, 14)), content_right, system_y + 54, 15, 0.9)
+  draw_text(cr, string.format('Arch %s', machine ~= '' and machine or 'unknown'), content_left, system_y + 80, 15, 0.85)
+  draw_text_right(cr, string.format('Processes %s', conky_parse('${running_processes}')), content_right, system_y + 80, 15, 0.85)
 
   local cpu_summary_y = system_y + 138
-  draw_divider(cr, x + 30, cpu_summary_y - 18, x + 440)
-  draw_text(cr, cpu_model, x + 32, cpu_summary_y + 4, 16, 0.98, false)
+  draw_section_divider(cr, divider_left, content_right, cpu_summary_y)
+  draw_text(cr, cpu_model, content_left, cpu_summary_y + 4, 16, 0.98, false)
   draw_text(
     cr,
     string.format('%d cores   load %s %s %s   up %s', cpu_count, load_1, load_5, load_15, uptime),
-    x + 32,
+    content_left,
     cpu_summary_y + 42,
     15,
     0.88
   )
-  draw_divider(cr, x + 30, cpu_summary_y + 58, x + 440, 0.35)
+  draw_content_divider(cr, divider_left, content_right, cpu_summary_y + 58, 0.35)
 
   local cpu_graph_y = cpu_summary_y + 76
-  draw_text(cr, 'CPU History', x + 32, cpu_graph_y, 16, 0.95)
-  draw_text_right(cr, string.format('%d%%', math.floor(cpu_total + 0.5)), x + 440, cpu_graph_y, 16, 0.95)
-  draw_graph(cr, x + 32, cpu_graph_y + 10, 408, 42, cpu_graph, 0.98, 0.47, 0.28, 100)
-  draw_divider(cr, x + 30, cpu_graph_y + 66, x + 440)
+  draw_section_header(cr, content_left, content_right, cpu_graph_y, 'CPU History', string.format('%d%%', math.floor(cpu_total + 0.5)), 16, 16, 0.95)
+  draw_graph(cr, content_left, cpu_graph_y + 10, CONTENT_WIDTH, 42, cpu_graph, 0.98, 0.47, 0.28, 100)
+  draw_content_divider(cr, divider_left, content_right, cpu_graph_y + 66)
 
   local visible_cores = math.min(math.max(cpu_count, 1), 8)
   local process_count = 10
@@ -783,89 +818,87 @@ function conky_dashboard_panel()
     draw_circle(cr, x + 35, current_y - 6, 4, 0.98, 0.47, 0.28, 1)
     draw_text(cr, string.format('Core %d', core), x + 50, current_y, 16, 1)
     draw_bar(cr, x + 148, current_y - 14, 220, 10, usage)
-    draw_text_right(cr, string.format('%d%%', math.floor(usage + 0.5)), x + 440, current_y, 16, 1)
+    draw_text_right(cr, string.format('%d%%', math.floor(usage + 0.5)), content_right, current_y, 16, 1)
 
     if core < visible_cores then
-      draw_divider(cr, x + 30, current_y + 12, x + 440)
+      draw_content_divider(cr, divider_left, content_right, current_y + 12)
     end
   end
 
   local memory_y = row_y + visible_cores * row_h + 26
-  draw_divider(cr, x + 30, memory_y - 18, x + 440)
-  draw_text(cr, 'Memory', x + 32, memory_y, 18, 1)
-  draw_text_right(cr, string.format('%d%%', math.floor(mem_percent + 0.5)), x + 440, memory_y, 18, 1)
+  draw_section_divider(cr, divider_left, content_right, memory_y)
+  draw_section_header(cr, content_left, content_right, memory_y, 'Memory', string.format('%d%%', math.floor(mem_percent + 0.5)), 18, 18, 1)
 
   local ram_bar_y = memory_y + 16
-  draw_bar(cr, x + 32, ram_bar_y, 408, 12, mem_percent)
+  draw_bar(cr, content_left, ram_bar_y, CONTENT_WIDTH, 12, mem_percent)
   draw_text(
     cr,
     string.format('Used %s / %s', format_gib_from_kib(mem_used), format_gib_from_kib(mem_total)),
-    x + 32,
+    content_left,
     ram_bar_y + 30,
     15,
     0.95
   )
-  draw_text_right(cr, string.format('Available %s', format_gib_from_kib(mem_available)), x + 440, ram_bar_y + 30, 15, 0.95)
+  draw_text_right(cr, string.format('Available %s', format_gib_from_kib(mem_available)), content_right, ram_bar_y + 30, 15, 0.95)
   draw_text(
     cr,
     string.format('Cached %s', format_gib_from_kib(mem_cached)),
-    x + 32,
+    content_left,
     ram_bar_y + 56,
     15,
     0.82
   )
-  draw_text_right(cr, string.format('Buffers %s', format_gib_from_kib(mem_buffers)), x + 440, ram_bar_y + 56, 15, 0.82)
+  draw_text_right(cr, string.format('Buffers %s', format_gib_from_kib(mem_buffers)), content_right, ram_bar_y + 56, 15, 0.82)
 
   local storage_y = ram_bar_y + 110
-  draw_divider(cr, x + 30, storage_y - 18, x + 440)
-  draw_text(cr, 'Storage', x + 32, storage_y, 18, 1)
+  draw_section_divider(cr, divider_left, content_right, storage_y)
+  draw_section_header(cr, content_left, content_right, storage_y, 'Storage')
 
   local drive_y = storage_y + 28
-  drive_y = drive_y + draw_drive_row(cr, x + 32, drive_y, 408, root_drive)
-  drive_y = drive_y + draw_drive_row(cr, x + 32, drive_y, 408, home_drive)
+  drive_y = drive_y + draw_drive_row(cr, content_left, drive_y, CONTENT_WIDTH, root_drive)
+  drive_y = drive_y + draw_drive_row(cr, content_left, drive_y, CONTENT_WIDTH, home_drive)
 
   if #external_drives > 0 then
-    draw_text(cr, 'External Drives', x + 32, drive_y + 4, 16, 0.95)
+    draw_text(cr, 'External Drives', content_left, drive_y + 4, 16, 0.95)
     drive_y = drive_y + 28
 
     for index = 1, math.min(3, #external_drives) do
-      drive_y = drive_y + draw_drive_row(cr, x + 32, drive_y, 408, external_drives[index])
+      drive_y = drive_y + draw_drive_row(cr, content_left, drive_y, CONTENT_WIDTH, external_drives[index])
     end
   end
 
   local disk_io_y = drive_y + 22
   local current_read = disk_graphs.read_history[#disk_graphs.read_history] or 0
   local current_write = disk_graphs.write_history[#disk_graphs.write_history] or 0
-  draw_text(cr, 'Disk I/O', x + 32, disk_io_y, 16, 0.95)
+  draw_section_header(cr, content_left, content_right, disk_io_y, 'Disk I/O', nil, 16)
   draw_text(cr, string.format('R %s/s', format_bytes(current_read)), x + 180, disk_io_y, 14, 0.9)
-  draw_text_right(cr, string.format('W %s/s', format_bytes(current_write)), x + 440, disk_io_y, 14, 0.9)
-  draw_dual_graph(cr, x + 32, disk_io_y + 10, 408, 36, disk_graphs.read_history, disk_graphs.write_history)
+  draw_text_right(cr, string.format('W %s/s', format_bytes(current_write)), content_right, disk_io_y, 14, 0.9)
+  draw_dual_graph(cr, content_left, disk_io_y + 10, CONTENT_WIDTH, 36, disk_graphs.read_history, disk_graphs.write_history)
 
   local network_y = disk_io_y + 80
-  draw_divider(cr, x + 30, network_y - 18, x + 440)
-  draw_text(cr, 'Network', x + 32, network_y, 18, 1)
-  draw_text_right(cr, ellipsize(iface, 14), x + 440, network_y, 16, 0.95)
+  draw_section_divider(cr, divider_left, content_right, network_y)
+  draw_section_header(cr, content_left, content_right, network_y, 'Network', ellipsize(iface, 14), 18, 16, 0.95)
 
   local network_row_y = network_y + 30
   if essid ~= '' and essid ~= iface then
-    draw_text(cr, ellipsize(essid, 28), x + 32, network_row_y, 15, 0.9)
+    draw_text(cr, ellipsize(essid, 28), content_left, network_row_y, 15, 0.9)
   end
-  draw_text(cr, string.format('IP %s', ip_addr ~= '' and ip_addr or 'Unavailable'), x + 32, network_row_y + 24, 15, 0.95)
+  draw_text(cr, string.format('IP %s', ip_addr ~= '' and ip_addr or 'Unavailable'), content_left, network_row_y + 24, 15, 0.95)
 
   local down_y = network_row_y + 52
-  draw_text(cr, string.format('Down %s/s', format_speed(downspeed, 'B')), x + 32, down_y, 15, 1)
-  draw_text_right(cr, string.format('Total %s', totaldown ~= '' and totaldown or '0B'), x + 440, down_y, 15, 0.85)
-  draw_graph(cr, x + 32, down_y + 10, 408, 34, network_graphs.rx_history, 0.98, 0.47, 0.28)
+  draw_text(cr, string.format('Down %s/s', format_speed(downspeed, 'B')), content_left, down_y, 15, 1)
+  draw_text_right(cr, string.format('Total %s', totaldown ~= '' and totaldown or '0B'), content_right, down_y, 15, 0.85)
+  draw_graph(cr, content_left, down_y + 10, CONTENT_WIDTH, 34, network_graphs.rx_history, 0.98, 0.47, 0.28)
 
   local up_y = down_y + 64
-  draw_text(cr, string.format('Up   %s/s', format_speed(upspeed, 'B')), x + 32, up_y, 15, 1)
-  draw_text_right(cr, string.format('Total %s', totalup ~= '' and totalup or '0B'), x + 440, up_y, 15, 0.85)
-  draw_graph(cr, x + 32, up_y + 10, 408, 34, network_graphs.tx_history, 0.95, 0.68, 0.46)
+  draw_text(cr, string.format('Up   %s/s', format_speed(upspeed, 'B')), content_left, up_y, 15, 1)
+  draw_text_right(cr, string.format('Total %s', totalup ~= '' and totalup or '0B'), content_right, up_y, 15, 0.85)
+  draw_graph(cr, content_left, up_y + 10, CONTENT_WIDTH, 34, network_graphs.tx_history, 0.95, 0.68, 0.46)
 
   if tonumber(signal) and tonumber(signal) > 0 then
     local signal_y = up_y + 64
-    draw_text(cr, 'Signal', x + 32, signal_y, 15, 0.95)
-    draw_text_right(cr, string.format('%s%%', signal), x + 440, signal_y, 15, 0.95)
+    draw_text(cr, 'Signal', content_left, signal_y, 15, 0.95)
+    draw_text_right(cr, string.format('%s%%', signal), content_right, signal_y, 15, 0.95)
     draw_bar(cr, x + 95, signal_y - 11, 280, 8, tonumber(signal))
     up_y = signal_y
   else
@@ -873,10 +906,10 @@ function conky_dashboard_panel()
   end
 
   local processes_y = up_y + 56
-  draw_divider(cr, x + 30, processes_y - 18, x + 440)
-  draw_text(cr, 'Top Processes', x + 32, processes_y, 18, 1)
+  draw_section_divider(cr, divider_left, content_right, processes_y)
+  draw_section_header(cr, content_left, content_right, processes_y, 'Top Processes')
   draw_text_right(cr, 'CPU', x + 390, processes_y, 16, 0.9)
-  draw_text_right(cr, 'MEM', x + 440, processes_y, 16, 0.9)
+  draw_text_right(cr, 'MEM', content_right, processes_y, 16, 0.9)
 
   local process_row_y = processes_y + 28
   local process_row_h = 24
@@ -889,20 +922,19 @@ function conky_dashboard_panel()
     draw_circle(cr, x + 35, current_y - 6, 4, 0.98, 0.47, 0.28, 1)
     draw_text(cr, name ~= '' and name or '-', x + 50, current_y, 15, 1)
     draw_text_right(cr, string.format('%s%%', cpu ~= '' and cpu or '0'), x + 390, current_y, 15, 1)
-    draw_text_right(cr, string.format('%s%%', mem ~= '' and mem or '0'), x + 440, current_y, 15, 1)
+    draw_text_right(cr, string.format('%s%%', mem ~= '' and mem or '0'), content_right, current_y, 15, 1)
 
     if index < process_count then
-      draw_divider(cr, x + 30, current_y + 12, x + 440)
+      draw_content_divider(cr, divider_left, content_right, current_y + 12)
     end
   end
 
   local calendar_y = process_row_y + process_count * process_row_h + 22
-  draw_divider(cr, x + 30, calendar_y - 18, x + 440)
-  draw_text(cr, 'Calendar', x + 32, calendar_y, 18, 1)
-  draw_text_right(cr, month_title, x + 440, calendar_y, 15, 0.9)
+  draw_section_divider(cr, divider_left, content_right, calendar_y)
+  draw_section_header(cr, content_left, content_right, calendar_y, 'Calendar', month_title)
 
   local headers = { 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' }
-  local calendar_grid_x = x + 32
+  local calendar_grid_x = content_left
   local calendar_grid_y = calendar_y + 20
   local calendar_cell_w = 58
   local calendar_cell_h = 36
@@ -940,26 +972,25 @@ function conky_dashboard_panel()
   local calendar_bottom_y = calendar_grid_y + 20 + (6 * calendar_cell_h)
 
   local weather_y = calendar_bottom_y + 26
-  draw_divider(cr, x + 30, weather_y - 18, x + 440)
-  draw_text(cr, 'Weather', x + 32, weather_y, 18, 1)
-  draw_text_right(cr, 'Bacoor, Cavite', x + 440, weather_y, 15, 0.85)
-  draw_text(cr, ellipsize(weather_summary ~= '' and weather_summary or 'Unavailable', 44), x + 32, weather_y + 26, 16, 0.98)
+  draw_section_divider(cr, divider_left, content_right, weather_y)
+  draw_section_header(cr, content_left, content_right, weather_y, 'Weather', 'Bacoor, Cavite', 18, 15, 0.85)
+  draw_text(cr, ellipsize(weather_summary ~= '' and weather_summary or 'Unavailable', 44), content_left, weather_y + 26, 16, 0.98)
 
   if today_label and today_max and today_min then
     draw_text(
       cr,
       string.format('%s  %s° / %s°', today_label, today_max, today_min),
-      x + 32,
+      content_left,
       weather_y + 50,
       15,
       0.95
     )
-    draw_text_right(cr, ellipsize(today_condition or '', 28), x + 440, weather_y + 50, 15, 0.82)
+    draw_text_right(cr, ellipsize(today_condition or '', 28), content_right, weather_y + 50, 15, 0.82)
   else
-    draw_text(cr, 'Today forecast unavailable', x + 32, weather_y + 50, 15, 0.85)
+    draw_text(cr, 'Today forecast unavailable', content_left, weather_y + 50, 15, 0.85)
   end
 
-  draw_text(cr, ellipsize(weather_details ~= '' and weather_details or 'Weather details unavailable', 46), x + 32, weather_y + 74, 14, 0.8)
+  draw_text(cr, ellipsize(weather_details ~= '' and weather_details or 'Weather details unavailable', 46), content_left, weather_y + 74, 14, 0.8)
 
   cairo_destroy(cr)
   cairo_surface_destroy(cs)
