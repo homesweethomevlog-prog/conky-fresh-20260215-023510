@@ -815,7 +815,7 @@ function conky_cpu_monitor()
 
   draw_divider(cr, x + 30, ram_bar_y + 86, x + 440)
 
-  local storage_y = ram_bar_y + 120
+  local storage_y = ram_bar_y + 110
   draw_text(cr, 'Storage', x + 32, storage_y, 18, 1)
 
   local drive_y = storage_y + 28
