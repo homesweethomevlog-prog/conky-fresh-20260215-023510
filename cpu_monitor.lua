@@ -740,10 +740,10 @@ function conky_cpu_monitor()
   end
 
   local datetime_y = y + 46
-  draw_text(cr, current_datetime, x + 32, datetime_y, 24, 1, true)
-  draw_divider(cr, x + 30, datetime_y + 16, x + 440, 0.35)
-
   local system_y = y + 86
+  draw_text(cr, current_datetime, x + 32, datetime_y, 24, 1, true)
+  draw_divider(cr, x + 30, system_y - 18, x + 440, 0.35)
+
   draw_text(cr, 'System', x + 32, system_y, 18, 1)
   draw_text(cr, string.format('Host %s', ellipsize(host_name, 18)), x + 32, system_y + 28, 15, 0.95)
   draw_text(cr, string.format('OS %s', ellipsize(os_name, 24)), x + 32, system_y + 54, 15, 0.95)
@@ -751,9 +751,9 @@ function conky_cpu_monitor()
   draw_text_right(cr, string.format('Desktop %s', ellipsize(desktop, 14)), x + 440, system_y + 54, 15, 0.9)
   draw_text(cr, string.format('Arch %s', machine ~= '' and machine or 'unknown'), x + 32, system_y + 80, 15, 0.85)
   draw_text_right(cr, string.format('Processes %s', conky_parse('${running_processes}')), x + 440, system_y + 80, 15, 0.85)
-  draw_divider(cr, x + 30, system_y + 98, x + 440)
 
   local cpu_summary_y = system_y + 138
+  draw_divider(cr, x + 30, cpu_summary_y - 18, x + 440)
   draw_text(cr, cpu_model, x + 32, cpu_summary_y + 4, 16, 0.98, false)
   draw_text(
     cr,
@@ -785,10 +785,13 @@ function conky_cpu_monitor()
     draw_bar(cr, x + 148, current_y - 14, 220, 10, usage)
     draw_text_right(cr, string.format('%d%%', math.floor(usage + 0.5)), x + 440, current_y, 16, 1)
 
-    draw_divider(cr, x + 30, current_y + 12, x + 440)
+    if core < visible_cores then
+      draw_divider(cr, x + 30, current_y + 12, x + 440)
+    end
   end
 
   local memory_y = row_y + visible_cores * row_h + 26
+  draw_divider(cr, x + 30, memory_y - 18, x + 440)
   draw_text(cr, 'Memory', x + 32, memory_y, 18, 1)
   draw_text_right(cr, string.format('%d%%', math.floor(mem_percent + 0.5)), x + 440, memory_y, 18, 1)
 
@@ -813,9 +816,8 @@ function conky_cpu_monitor()
   )
   draw_text_right(cr, string.format('Buffers %s', format_gib_from_kib(mem_buffers)), x + 440, ram_bar_y + 56, 15, 0.82)
 
-  draw_divider(cr, x + 30, ram_bar_y + 86, x + 440)
-
   local storage_y = ram_bar_y + 110
+  draw_divider(cr, x + 30, storage_y - 18, x + 440)
   draw_text(cr, 'Storage', x + 32, storage_y, 18, 1)
 
   local drive_y = storage_y + 28
@@ -838,9 +840,9 @@ function conky_cpu_monitor()
   draw_text(cr, string.format('R %s/s', format_bytes(current_read)), x + 180, disk_io_y, 14, 0.9)
   draw_text_right(cr, string.format('W %s/s', format_bytes(current_write)), x + 440, disk_io_y, 14, 0.9)
   draw_dual_graph(cr, x + 32, disk_io_y + 10, 408, 36, disk_graphs.read_history, disk_graphs.write_history)
-  draw_divider(cr, x + 30, disk_io_y + 54, x + 440)
 
   local network_y = disk_io_y + 80
+  draw_divider(cr, x + 30, network_y - 18, x + 440)
   draw_text(cr, 'Network', x + 32, network_y, 18, 1)
   draw_text_right(cr, ellipsize(iface, 14), x + 440, network_y, 16, 0.95)
 
@@ -870,9 +872,8 @@ function conky_cpu_monitor()
     up_y = up_y + 30
   end
 
-  draw_divider(cr, x + 30, up_y + 22, x + 440)
-
   local processes_y = up_y + 56
+  draw_divider(cr, x + 30, processes_y - 18, x + 440)
   draw_text(cr, 'Top Processes', x + 32, processes_y, 18, 1)
   draw_text_right(cr, 'CPU', x + 390, processes_y, 16, 0.9)
   draw_text_right(cr, 'MEM', x + 440, processes_y, 16, 0.9)
@@ -890,10 +891,13 @@ function conky_cpu_monitor()
     draw_text_right(cr, string.format('%s%%', cpu ~= '' and cpu or '0'), x + 390, current_y, 15, 1)
     draw_text_right(cr, string.format('%s%%', mem ~= '' and mem or '0'), x + 440, current_y, 15, 1)
 
-    draw_divider(cr, x + 30, current_y + 12, x + 440)
+    if index < process_count then
+      draw_divider(cr, x + 30, current_y + 12, x + 440)
+    end
   end
 
   local calendar_y = process_row_y + process_count * process_row_h + 22
+  draw_divider(cr, x + 30, calendar_y - 18, x + 440)
   draw_text(cr, 'Calendar', x + 32, calendar_y, 18, 1)
   draw_text_right(cr, month_title, x + 440, calendar_y, 15, 0.9)
 
@@ -934,9 +938,9 @@ function conky_cpu_monitor()
   end
 
   local calendar_bottom_y = calendar_grid_y + 20 + (6 * calendar_cell_h)
-  draw_divider(cr, x + 30, calendar_bottom_y + 6, x + 440)
 
   local weather_y = calendar_bottom_y + 26
+  draw_divider(cr, x + 30, weather_y - 18, x + 440)
   draw_text(cr, 'Weather', x + 32, weather_y, 18, 1)
   draw_text_right(cr, 'Bacoor, Cavite', x + 440, weather_y, 15, 0.85)
   draw_text(cr, ellipsize(weather_summary ~= '' and weather_summary or 'Unavailable', 38), x + 32, weather_y + 26, 16, 0.98)
