@@ -43,6 +43,18 @@ local function draw_text(cr, text, x, y, size, alpha, bold)
   cairo_show_text(cr, text or '')
 end
 
+local function draw_text_right(cr, text, right_x, y, size, alpha, bold)
+  local weight = bold and CAIRO_FONT_WEIGHT_BOLD or CAIRO_FONT_WEIGHT_NORMAL
+  cairo_select_font_face(cr, 'JetBrainsMono Nerd Font', CAIRO_FONT_SLANT_NORMAL, weight)
+  cairo_set_font_size(cr, size)
+  cairo_set_source_rgba(cr, 1, 1, 1, alpha or 1)
+  local value = text or ''
+  local extents = cairo_text_extents_t:create()
+  cairo_text_extents(cr, value, extents)
+  cairo_move_to(cr, right_x - extents.width - extents.x_bearing, y)
+  cairo_show_text(cr, value)
+end
+
 local function draw_circle(cr, x, y, radius, r, g, b, a)
   cairo_set_source_rgba(cr, r, g, b, a)
   cairo_arc(cr, x, y, radius, 0, math.pi * 2)
@@ -643,7 +655,7 @@ local function draw_drive_row(cr, x, y, width, entry)
   end
 
   draw_text(cr, drive_label(entry), x, y, 16, 1)
-  draw_text(cr, string.format('%d%%', math.floor(entry.percent + 0.5)), x + width - 44, y, 16, 1)
+  draw_text_right(cr, string.format('%d%%', math.floor(entry.percent + 0.5)), x + width, y, 16, 1)
   draw_bar(cr, x, y + 12, width, 10, entry.percent)
   draw_text(
     cr,
@@ -735,10 +747,10 @@ function conky_cpu_monitor()
   draw_text(cr, 'System', x + 32, system_y, 18, 1)
   draw_text(cr, string.format('Host %s', ellipsize(host_name, 18)), x + 32, system_y + 28, 15, 0.95)
   draw_text(cr, string.format('OS %s', ellipsize(os_name, 24)), x + 32, system_y + 54, 15, 0.95)
-  draw_text(cr, string.format('Kernel %s', ellipsize(kernel, 18)), x + 255, system_y + 28, 15, 0.9)
-  draw_text(cr, string.format('Desktop %s', ellipsize(desktop, 14)), x + 255, system_y + 54, 15, 0.9)
+  draw_text_right(cr, string.format('Kernel %s', ellipsize(kernel, 18)), x + 440, system_y + 28, 15, 0.9)
+  draw_text_right(cr, string.format('Desktop %s', ellipsize(desktop, 14)), x + 440, system_y + 54, 15, 0.9)
   draw_text(cr, string.format('Arch %s', machine ~= '' and machine or 'unknown'), x + 32, system_y + 80, 15, 0.85)
-  draw_text(cr, string.format('Processes %s', conky_parse('${running_processes}')), x + 255, system_y + 80, 15, 0.85)
+  draw_text_right(cr, string.format('Processes %s', conky_parse('${running_processes}')), x + 440, system_y + 80, 15, 0.85)
   draw_divider(cr, x + 30, system_y + 98, x + 440)
 
   local cpu_summary_y = system_y + 138
@@ -755,7 +767,7 @@ function conky_cpu_monitor()
 
   local cpu_graph_y = cpu_summary_y + 76
   draw_text(cr, 'CPU History', x + 32, cpu_graph_y, 16, 0.95)
-  draw_text(cr, string.format('%d%%', math.floor(cpu_total + 0.5)), x + 404, cpu_graph_y, 16, 0.95)
+  draw_text_right(cr, string.format('%d%%', math.floor(cpu_total + 0.5)), x + 440, cpu_graph_y, 16, 0.95)
   draw_graph(cr, x + 32, cpu_graph_y + 10, 408, 42, cpu_graph, 0.98, 0.47, 0.28, 100)
   draw_divider(cr, x + 30, cpu_graph_y + 66, x + 440)
 
@@ -771,14 +783,14 @@ function conky_cpu_monitor()
     draw_circle(cr, x + 35, current_y - 6, 4, 0.98, 0.47, 0.28, 1)
     draw_text(cr, string.format('Core %d', core), x + 50, current_y, 16, 1)
     draw_bar(cr, x + 148, current_y - 14, 220, 10, usage)
-    draw_text(cr, string.format('%3d%%', math.floor(usage + 0.5)), x + 388, current_y, 16, 1)
+    draw_text_right(cr, string.format('%d%%', math.floor(usage + 0.5)), x + 440, current_y, 16, 1)
 
     draw_divider(cr, x + 30, current_y + 12, x + 440)
   end
 
   local memory_y = row_y + visible_cores * row_h + 26
   draw_text(cr, 'Memory', x + 32, memory_y, 18, 1)
-  draw_text(cr, string.format('%d%%', math.floor(mem_percent + 0.5)), x + 403, memory_y, 18, 1)
+  draw_text_right(cr, string.format('%d%%', math.floor(mem_percent + 0.5)), x + 440, memory_y, 18, 1)
 
   local ram_bar_y = memory_y + 16
   draw_bar(cr, x + 32, ram_bar_y, 408, 12, mem_percent)
@@ -790,14 +802,7 @@ function conky_cpu_monitor()
     15,
     0.95
   )
-  draw_text(
-    cr,
-    string.format('Available %s', format_gib_from_kib(mem_available)),
-    x + 282,
-    ram_bar_y + 30,
-    15,
-    0.95
-  )
+  draw_text_right(cr, string.format('Available %s', format_gib_from_kib(mem_available)), x + 440, ram_bar_y + 30, 15, 0.95)
   draw_text(
     cr,
     string.format('Cached %s', format_gib_from_kib(mem_cached)),
@@ -806,14 +811,7 @@ function conky_cpu_monitor()
     15,
     0.82
   )
-  draw_text(
-    cr,
-    string.format('Buffers %s', format_gib_from_kib(mem_buffers)),
-    x + 282,
-    ram_bar_y + 56,
-    15,
-    0.82
-  )
+  draw_text_right(cr, string.format('Buffers %s', format_gib_from_kib(mem_buffers)), x + 440, ram_bar_y + 56, 15, 0.82)
 
   draw_divider(cr, x + 30, ram_bar_y + 86, x + 440)
 
@@ -838,13 +836,13 @@ function conky_cpu_monitor()
   local current_write = disk_graphs.write_history[#disk_graphs.write_history] or 0
   draw_text(cr, 'Disk I/O', x + 32, disk_io_y, 16, 0.95)
   draw_text(cr, string.format('R %s/s', format_bytes(current_read)), x + 180, disk_io_y, 14, 0.9)
-  draw_text(cr, string.format('W %s/s', format_bytes(current_write)), x + 318, disk_io_y, 14, 0.9)
+  draw_text_right(cr, string.format('W %s/s', format_bytes(current_write)), x + 440, disk_io_y, 14, 0.9)
   draw_dual_graph(cr, x + 32, disk_io_y + 10, 408, 36, disk_graphs.read_history, disk_graphs.write_history)
   draw_divider(cr, x + 30, disk_io_y + 54, x + 440)
 
   local network_y = disk_io_y + 80
   draw_text(cr, 'Network', x + 32, network_y, 18, 1)
-  draw_text(cr, ellipsize(iface, 14), x + 390, network_y, 16, 0.95)
+  draw_text_right(cr, ellipsize(iface, 14), x + 440, network_y, 16, 0.95)
 
   local network_row_y = network_y + 30
   if essid ~= '' and essid ~= iface then
@@ -854,18 +852,18 @@ function conky_cpu_monitor()
 
   local down_y = network_row_y + 52
   draw_text(cr, string.format('Down %s/s', format_speed(downspeed, 'B')), x + 32, down_y, 15, 1)
-  draw_text(cr, string.format('Total %s', totaldown ~= '' and totaldown or '0B'), x + 282, down_y, 15, 0.85)
+  draw_text_right(cr, string.format('Total %s', totaldown ~= '' and totaldown or '0B'), x + 440, down_y, 15, 0.85)
   draw_graph(cr, x + 32, down_y + 10, 408, 34, network_graphs.rx_history, 0.98, 0.47, 0.28)
 
   local up_y = down_y + 56
   draw_text(cr, string.format('Up   %s/s', format_speed(upspeed, 'B')), x + 32, up_y, 15, 1)
-  draw_text(cr, string.format('Total %s', totalup ~= '' and totalup or '0B'), x + 282, up_y, 15, 0.85)
+  draw_text_right(cr, string.format('Total %s', totalup ~= '' and totalup or '0B'), x + 440, up_y, 15, 0.85)
   draw_graph(cr, x + 32, up_y + 10, 408, 34, network_graphs.tx_history, 0.95, 0.68, 0.46)
 
   if tonumber(signal) and tonumber(signal) > 0 then
     local signal_y = up_y + 56
     draw_text(cr, 'Signal', x + 32, signal_y, 15, 0.95)
-    draw_text(cr, string.format('%s%%', signal), x + 405, signal_y, 15, 0.95)
+    draw_text_right(cr, string.format('%s%%', signal), x + 440, signal_y, 15, 0.95)
     draw_bar(cr, x + 95, signal_y - 11, 280, 8, tonumber(signal))
     up_y = signal_y
   else
@@ -876,8 +874,8 @@ function conky_cpu_monitor()
 
   local processes_y = up_y + 56
   draw_text(cr, 'Top Processes', x + 32, processes_y, 18, 1)
-  draw_text(cr, 'CPU', x + 340, processes_y, 16, 0.9)
-  draw_text(cr, 'MEM', x + 405, processes_y, 16, 0.9)
+  draw_text_right(cr, 'CPU', x + 390, processes_y, 16, 0.9)
+  draw_text_right(cr, 'MEM', x + 440, processes_y, 16, 0.9)
 
   local process_row_y = processes_y + 28
   local process_row_h = 24
@@ -889,15 +887,15 @@ function conky_cpu_monitor()
 
     draw_circle(cr, x + 35, current_y - 6, 4, 0.98, 0.47, 0.28, 1)
     draw_text(cr, name ~= '' and name or '-', x + 50, current_y, 15, 1)
-    draw_text(cr, string.format('%s%%', cpu ~= '' and cpu or '0'), x + 334, current_y, 15, 1)
-    draw_text(cr, string.format('%s%%', mem ~= '' and mem or '0'), x + 402, current_y, 15, 1)
+    draw_text_right(cr, string.format('%s%%', cpu ~= '' and cpu or '0'), x + 390, current_y, 15, 1)
+    draw_text_right(cr, string.format('%s%%', mem ~= '' and mem or '0'), x + 440, current_y, 15, 1)
 
     draw_divider(cr, x + 30, current_y + 12, x + 440)
   end
 
   local calendar_y = process_row_y + process_count * process_row_h + 22
   draw_text(cr, 'Calendar', x + 32, calendar_y, 18, 1)
-  draw_text(cr, month_title, x + 315, calendar_y, 15, 0.9)
+  draw_text_right(cr, month_title, x + 440, calendar_y, 15, 0.9)
 
   local headers = { 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' }
   local calendar_grid_x = x + 32
@@ -940,7 +938,7 @@ function conky_cpu_monitor()
 
   local weather_y = calendar_bottom_y + 26
   draw_text(cr, 'Weather', x + 32, weather_y, 18, 1)
-  draw_text(cr, 'Bacoor, Cavite', x + 300, weather_y, 15, 0.85)
+  draw_text_right(cr, 'Bacoor, Cavite', x + 440, weather_y, 15, 0.85)
   draw_text(cr, ellipsize(weather_summary ~= '' and weather_summary or 'Unavailable', 38), x + 32, weather_y + 26, 16, 0.98)
 
   if today_label and today_max and today_min then
