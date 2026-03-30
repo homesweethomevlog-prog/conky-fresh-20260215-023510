@@ -901,7 +901,7 @@ function conky_cpu_monitor()
   local calendar_grid_x = x + 32
   local calendar_grid_y = calendar_y + 20
   local calendar_cell_w = 58
-  local calendar_cell_h = 30
+  local calendar_cell_h = 36
 
   for col = 1, 7 do
     draw_text(cr, headers[col], calendar_grid_x + (col - 1) * calendar_cell_w + 6, calendar_grid_y + 14, 13, 0.9)
@@ -928,7 +928,7 @@ function conky_cpu_monitor()
         cairo_rectangle(cr, cell_x + 2, cell_y + 2, calendar_cell_w - 4, calendar_cell_h - 4)
         cairo_stroke(cr)
 
-        draw_text(cr, tostring(day_num), cell_x + 18, cell_y + 20, 16, 1, is_today)
+        draw_text(cr, tostring(day_num), cell_x + 18, cell_y + 23, 16, 1, is_today)
       end
     end
   end
