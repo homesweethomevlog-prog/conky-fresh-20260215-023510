@@ -38,7 +38,9 @@ start_if_missing() {
   /usr/bin/conky -c "$cfg" -d
 }
 
-start_if_missing "$(render_main_config)"
+# Disabled for now: keep the main right-side panel config available,
+# but do not start it automatically.
+# start_if_missing "$(render_main_config)"
 start_if_missing "$BASE_DIR/conky_calendar.conf"
 start_if_missing "$BASE_DIR/conky_cpu.conf"
 start_if_missing "$BASE_DIR/conky_weather.conf"

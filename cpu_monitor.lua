@@ -5,6 +5,8 @@ local drive_cache = {
   entries = {},
 }
 
+local SHOW_PANEL_SHELL = false
+
 local network_graph_cache = {}
 local disk_graph_cache = {
   timestamp = 0,
@@ -722,7 +724,9 @@ function conky_cpu_monitor()
   local network_graphs = update_network_graphs(iface)
   local cpu_graph = update_cpu_graph(cpu_total)
 
-  draw_panel(cr, x, y, panel_w, panel_h)
+  if SHOW_PANEL_SHELL then
+    draw_panel(cr, x, y, panel_w, panel_h)
+  end
 
   local datetime_y = y + 46
   draw_text(cr, current_time, x + 32, datetime_y, 30, 1, true)
